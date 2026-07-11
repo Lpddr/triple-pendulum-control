@@ -36,3 +36,26 @@ class ActorCritic(nn.Module):
         )
 
         # state independent log std, init 0 -> std = 1.0
+        self.actor_logstd = nn.Parameter(torch.zeros(1, act_dim))
+
+    def get_value(self, x):
+        return self.critic(x).squeeze(-1) # remove last dim, output shape: (batch,)
+    
+    def get_action_and_value(self, x, action=None):
+        # get mean from actor network
+        mu = self.actor(x)
+        # get std from log std parameter
+        std = torch.exp(self.actor_logstd.expand_as(mu))
+        # create normal distribution with mean and std
+        dist = Normal(mu, std)
+        # if action is not provided, sample from the distribution
+        if action is None:
+            action = dist.sample()
+        # calculate log probability of the action
+        log_prob = dist.log_prob(action).sum(-1)
+        # calculate entropy of the dist
+        entropy = dist.entropy().sum(-1)
+        # get value from the critic network
+        value = self.get_value(x)
+        return action, log_prob, entropy, value
+
