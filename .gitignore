@@ -14,3 +14,5 @@ eval/
 .DS_Store
 examples/preview*.png
 frame.png
+wandb/
+
