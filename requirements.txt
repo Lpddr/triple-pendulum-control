@@ -1,0 +1,8 @@
+gymnasium[mujoco]>=1.0.0
+mujoco>=2.3.3
+numpy>=1.24
+pytest>=7.0
+# optional demo helpers
+imageio>=2.31
+# optional training
+# stable-baselines3[extra]>=2.3.0
