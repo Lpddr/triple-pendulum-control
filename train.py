@@ -77,7 +77,7 @@ def watch(agent, device):
 
 def main():
     # init wandb
-    wandb.init(project="triple-pendulum-ppo", config=vars(config))
+    wandb.init(project="triple-pendulum-RL", config=vars(config))
     # set seeds
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
