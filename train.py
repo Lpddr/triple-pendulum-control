@@ -67,7 +67,7 @@ def watch(agent, device):
             with torch.no_grad():
                 obs_t = torch.tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
                 # use the policy mean, not a sample -> smooth, deterministic balancing
-                action = agent.actor_mean(obs_t).squeeze(0).cpu().numpy()
+                action = agent.actor(obs_t).squeeze(0).cpu().numpy()
             action = np.clip(action, -1.0, 1.0)
             obs, reward, term, trunc, _ = env.step(action) # auto renders in human mode
             if term or trunc:
