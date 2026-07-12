@@ -1,17 +1,27 @@
 # Inverted Triple Pendulum (Gymnasium + MuJoCo)
 
-A custom **inverted triple pendulum** environment built as a near drop-in extension of Gymnasium’s [`InvertedDoublePendulum-v5`](https://gymnasium.farama.org/environments/mujoco/inverted_double_pendulum/): same cart force control, same reward shape, **one extra pole** stacked on the free end.
+A custom **inverted triple pendulum** environment: Gymnasium’s [`InvertedDoublePendulum-v5`](https://gymnasium.farama.org/environments/mujoco/inverted_double_pendulum/) idea with **one extra pole** on the free end. Same cart-force control and reward family; harder balance problem.
 
-Visuals use a deep-space skybox, neon cyan rail, metallic cart, and a cyan → violet → magenta pole gradient with a gold tip jewel.
+This repo also has from-scratch **PPO** and **SAC** trainers (PyTorch + Weights & Biases), a MuJoCo viewer for checkpoints, demos, and tests.
+
+Visuals: deep-space skybox, neon cyan rail, metallic cart, cyan → violet → magenta poles, gold tip.
 
 ![concept](https://gymnasium.farama.org/_images/inverted_double_pendulum.gif)
+
+**Docs**
+
+| File | What it is |
+|------|------------|
+| [HOW_IT_WORKS.md](HOW_IT_WORKS.md) | End-to-end education: env, physics, PPO, SAC, training loops |
+| [SAC_SPS_SPEEDUP.md](SAC_SPS_SPEEDUP.md) | Why SAC was ~80 SPS and what we changed (~700–1100 SPS) |
 
 ## Quick start
 
 ```bash
-cd Code/triple-pendulum
+cd triple-pendulum
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+pip install torch wandb  # needed for from-scratch PPO / SAC
 
 # Live random agent (opens MuJoCo viewer)
 python examples/demo_random.py --episodes 3
@@ -21,6 +31,13 @@ python examples/demo_random.py --render-mode rgb_array --save-frame frame.png
 
 # Tests
 pytest -q
+```
+
+Optional Stable-Baselines3:
+
+```bash
+pip install -e ".[train]"
+python examples/train_sb3.py --timesteps 200000 --out models/ppo_triple
 ```
 
 ## Usage
@@ -77,7 +94,7 @@ r = r_{\text{alive}} - 0.01\,x_{\text{tip}}^2 - (y_{\text{tip}} - y^\*)^2
 \]
 
 - Alive bonus: `healthy_reward` (default **10**) while healthy  
-- Target tip height \(y^\*\): default **1.8**, the physically reachable upright tip height
+- Target tip height \(y^\*\): default **1.8** (physically reachable upright tip)  
 - Terminate when \(y_{\text{tip}} \le\) `termination_height` (default **1.5**)
 
 `info` includes `reward_survive`, `distance_penalty`, `velocity_penalty`, `tip_x`, `tip_y`.
@@ -95,33 +112,79 @@ gym.make(
 )
 ```
 
-## Training (optional)
+## Training
+
+Both custom trainers log to the W&B project `triple-pendulum-RL`. Use a smaller `reset_noise_scale` (0.05) while learning.
+
+### PPO (from scratch) — `train.py` + `model.py`
+
+On-policy: collect rollout → GAE → clipped policy/value updates. Default **10M** env steps, **16** vectorized envs. Typical SPS on this machine’s CPU setup: **~1400–2000**.
+
+```bash
+python train.py
+# checkpoints: ppo_InvertedTriplePendulum-v0_<step>.pt
+# opens MuJoCo viewer after training if watch_after_training=True
+```
+
+Watch a PPO checkpoint:
+
+```bash
+python viz.py                          # newest *.pt in project root
+python viz.py --checkpoint ppo_triple_final.pt
+```
+
+`viz.py` expects an **ActorCritic** state dict from `train.py` (not SAC).
+
+### SAC (from scratch) — `sac_train.py` + `sac_model.py`
+
+Off-policy soft actor-critic: replay buffer, twin Qs, auto-tuned temperature \(\alpha\). Default **1M** env steps, **16** vectorized envs, **one gradient update per vector step**. Typical SPS after the speedup: **~700–1100** on CPU (was ~80 with 1 env + update every step). Details: [SAC_SPS_SPEEDUP.md](SAC_SPS_SPEEDUP.md).
+
+```bash
+python sac_train.py
+# checkpoints: sac_triple_latest.pt (every 250k), sac_triple_final.pt
+```
+
+SAC saves **actor weights only**. Watching them needs a small loader for `sac_model.Actor` (not `viz.py` as-is).
+
+### Stable-Baselines3 (optional)
 
 ```bash
 pip install 'stable-baselines3[extra]'
 python examples/train_sb3.py --timesteps 200000 --out models/ppo_triple
 ```
 
-This is a **harder** control problem than the double pendulum. Tips:
+### Tips
 
 1. Start with `reset_noise_scale=0.05`  
-2. Curriculum: train double first, then transfer / fine-tune  
-3. Use domain randomization on gravity / pole mass later if you want robustness  
+2. This is harder than double pendulum — expect longer training  
+3. PPO is sample-hungry but simple; SAC reuses data via the replay buffer  
+4. Device defaults to CUDA if available, otherwise CPU (no MPS fallback in the scripts)
 
 ## Project layout
 
 ```
 triple-pendulum/
   triple_pendulum/
-    __init__.py          # gym registration
-    env.py               # InvertedTriplePendulumEnv
+    __init__.py                 # gym registration → InvertedTriplePendulum-v0
+    env.py                      # InvertedTriplePendulumEnv
     assets/
       inverted_triple_pendulum.xml
+  model.py                      # PPO ActorCritic
+  train.py                      # PPO training loop
+  sac_model.py                  # SAC Actor + twin Q critics
+  sac_train.py                  # SAC training loop (vectorized)
+  viz.py                        # watch PPO checkpoints
   examples/
-    demo_random.py
-    train_sb3.py
+    demo_random.py              # random agent / render demo
+    train_sb3.py                # optional SB3 PPO
   tests/
-    test_env.py
+    test_env.py                 # smoke tests
+    test_physics_and_safety.py  # geometry, reward, TimeLimit, finiteness
+  HOW_IT_WORKS.md               # education walkthrough
+  SAC_SPS_SPEEDUP.md            # SAC throughput change writeup
+  README.md
+  pyproject.toml
+  requirements.txt
 ```
 
 ## Design notes vs double pendulum
@@ -140,4 +203,6 @@ triple-pendulum/
 
 - Python ≥ 3.10  
 - `gymnasium[mujoco]`, `mujoco`, `numpy`  
+- Training scripts: `torch`, `wandb` (and `glfw` for live viewers)  
+- Optional: `stable-baselines3[extra]`, `pytest`, `imageio`  
 - macOS: MuJoCo viewer needs a display for `render_mode="human"`
