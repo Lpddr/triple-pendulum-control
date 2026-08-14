@@ -3,7 +3,7 @@ differences from ppo:
 - actor ouputs mean and log_std per state (state dependent std; PPo used
 one global std). the std is how SAD modulates exploration per state
 - actions are squashed through tanh -> [-1, 1], with log_prob correction
-- critics are Q(s, a): they take state and action, output one scalar each.
+- critics are Q(s, a): they take state and action, output one scalar (number) each. 
 
 SAC trains the actor through the critic's opinion of differentiable actions, 
 using entropy as a first class objective
