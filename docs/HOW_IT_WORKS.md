@@ -120,7 +120,7 @@ Both learn a policy \(\pi(a \mid s)\): “given observation, push the cart left/
 
 They disagree on **when** to learn and **from what data**.
 
-| | PPO (`train.py`) | SAC (`sac_train.py`) |
+| | PPO (`algorithms/ppo/train.py`) | SAC (`algorithms/sac/sac_train.py`) |
 |--|------------------|----------------------|
 | Style | On-policy | Off-policy |
 | Data | Fresh rollouts only | Replay buffer (reuse old steps) |
@@ -136,7 +136,7 @@ Neither is “wrong.” PPO is often easier to debug; SAC often needs fewer env 
 
 ## 4. PPO stack
 
-### Networks — `model.py` (`ActorCritic`)
+### Networks — `algorithms/ppo/model.py` (`ActorCritic`)
 
 Two MLPs sharing the same input dim, **not** a shared trunk:
 
@@ -146,7 +146,7 @@ Two MLPs sharing the same input dim, **not** a shared trunk:
 
 Actions are sampled from \(\mathcal{N}(\mu(s), \sigma)\). Orthogonal init (policy head small gain) is CleanRL-style.
 
-### Training loop — `train.py`
+### Training loop — `algorithms/ppo/train.py`
 
 Four phases, repeated:
 
@@ -178,15 +178,17 @@ Ratio \(r_t = \pi_{\text{new}} / \pi_{\text{old}}\). Don’t trust huge policy c
 **Why SPS is high (~1400–2000 here)**  
 Most wall time is **MuJoCo stepping**. Gradient updates happen only once per 8192 env steps (then 10 epochs of minibatches). Env steps are “cheap”; updates are “expensive but rare.”
 
-### Watching PPO — `viz.py` / `watch()` in `train.py`
+### Watching a policy — `evaluation/viz.py` / `watch()` in `algorithms/ppo/train.py`
 
-Loads an `ActorCritic` checkpoint, runs the **mean** action (no sampling) in `render_mode="human"`, resets when the pole falls or time limit hits. `viz.py` picks the newest `*.pt` unless you pass `--checkpoint`. It intentionally rejects non-ActorCritic files (e.g. SAC actor-only saves).
+Loads a checkpoint, runs the deterministic action (no sampling) in `render_mode="human"`, resets when the pole falls or time limit hits. `viz.py` detects the checkpoint type from its state-dict keys and handles **both** a PPO `ActorCritic` (policy mean) and a SAC actor-only save (`tanh(mean)`); anything else is rejected. It picks the newest `*.pt` under `checkpoints/` unless you pass `--checkpoint`.
+
+Note that `viz.py` builds the env with the **default** `reset_noise_scale` of 0.1, while both trainers use 0.05. The saved policies balance for the full 1000 steps at 0.05 but fall on some seeds at 0.1, so the viewer is a harder test than training was.
 
 ---
 
 ## 5. SAC stack
 
-### Networks — `sac_model.py`
+### Networks — `algorithms/sac/sac_model.py`
 
 **Actor**
 
@@ -204,7 +206,7 @@ Loads an `ActorCritic` checkpoint, runs the **mean** action (no sampling) in `re
 **Temperature \(\alpha\)**  
 Auto-tuned via `log_alpha` so policy entropy tracks a target (here \(-\text{act_dim}\)). Higher \(\alpha\) → more exploration; lower → more exploitation.
 
-### Training loop — `sac_train.py`
+### Training loop — `algorithms/sac/sac_train.py`
 
 Off-policy cycle (every **vector** step after warmup):
 
@@ -244,7 +246,7 @@ No learning. Random actions; human window stays open until closed; optional `rgb
 
 ### `examples/train_sb3.py`
 
-Optional Stable-Baselines3 PPO. Same env id; different code path than `train.py`. Needs `pip install stable-baselines3[extra]`.
+Optional Stable-Baselines3 PPO. Same env id; different code path than `algorithms/ppo/train.py`. Needs `pip install stable-baselines3[extra]`.
 
 ### `tests/test_env.py`
 
@@ -263,7 +265,7 @@ Deeper: joint topology, upright tip ~1.8 m, gear 500, termination/reward consist
 | `pyproject.toml` | package metadata; install env with `pip install -e .` |
 | `requirements.txt` | flat list for casual installs |
 | `torch` / `wandb` | custom trainers (not in the core package deps) |
-| Checkpoints `*.pt` | saved weights (PPO full agent vs SAC actor-only) |
+| Checkpoints `*.pt` | saved weights (PPO full agent vs SAC actor-only); retained runs live in `checkpoints/ppo` and `checkpoints/sac`, but a fresh run writes to the working directory it was launched from |
 | `wandb/` | local W&B run files (gitignored) |
 
 Device line in both trainers:
@@ -292,9 +294,9 @@ Needs a minibatch from the buffer and several network updates. Expensive **and**
 ## 9. Suggested reading order in the code
 
 1. `triple_pendulum/env.py` — what the agent sees and is paid for  
-2. `model.py` then `train.py` — simplest full RL loop in this repo  
-3. `sac_model.py` then `sac_train.py` — off-policy counterpart  
-4. `viz.py` / `examples/demo_random.py` — interaction without training  
+2. `algorithms/ppo/model.py` then `algorithms/ppo/train.py` — simplest full RL loop in this repo  
+3. `algorithms/sac/sac_model.py` then `algorithms/sac/sac_train.py` — off-policy counterpart  
+4. `evaluation/viz.py` / `examples/demo_random.py` — interaction without training  
 5. `tests/test_physics_and_safety.py` — what “correct env” means here  
 
 For the SAC throughput redesign specifically, read [SAC_SPS_SPEEDUP.md](SAC_SPS_SPEEDUP.md) next.

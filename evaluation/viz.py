@@ -1,14 +1,24 @@
 """Watch the policy from the most recently saved checkpoint (PPO or SAC).
 
 Run from any directory with ``python path/to/viz.py``.  Pass ``--checkpoint``
-to watch a particular ``.pt`` file instead of the newest one.
+to watch a particular ``.pt`` file instead of the newest one under
+``checkpoints/``.
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Callable, Mapping
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CHECKPOINT_DIR = REPO_ROOT / "checkpoints"
+
+# ``triple_pendulum`` and the ``algorithms`` trees sit one level up from this
+# script, so the repository root has to be importable before they are imported.
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 import glfw
 import gymnasium as gym
@@ -16,17 +26,15 @@ import numpy as np
 import torch
 
 import triple_pendulum  # registers InvertedTriplePendulum-v0
-from model import ActorCritic
-from sac_model import Actor as SACActor
+from algorithms.ppo.model import ActorCritic
+from algorithms.sac.sac_model import Actor as SACActor
 
 Policy = Callable[[torch.Tensor], torch.Tensor]
 
-PROJECT_DIR = Path(__file__).resolve().parent
 
-
-def newest_checkpoint(directory: Path = PROJECT_DIR) -> Path:
-    """Return the most recently modified checkpoint in *directory*."""
-    checkpoints = [path for path in directory.glob("*.pt") if path.is_file()]
+def newest_checkpoint(directory: Path = CHECKPOINT_DIR) -> Path:
+    """Return the most recently modified checkpoint under *directory*."""
+    checkpoints = [path for path in directory.rglob("*.pt") if path.is_file()]
     if not checkpoints:
         raise FileNotFoundError(
             f"No .pt checkpoints found in {directory}. Train a model first or "
@@ -57,7 +65,8 @@ def load_agent(checkpoint_path: Path, obs_dim: int, act_dim: int) -> Policy:
         algo = "SAC"
     else:
         raise ValueError(
-            f"{checkpoint_path} is not a checkpoint produced by train.py or sac_train.py."
+            f"{checkpoint_path} is not a checkpoint produced by "
+            "algorithms/ppo/train.py or algorithms/sac/sac_train.py."
         )
 
     if (checkpoint_obs_dim, checkpoint_act_dim) != (obs_dim, act_dim):
