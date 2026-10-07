@@ -19,6 +19,14 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "imageio>=2.31"]
 train = ["stable-baselines3[extra]>=2.3.0"]
+hr = [
+  "mujoco>=3.14.0",
+  "torch>=2.0",
+  "wandb>=0.16",
+  "imageio[ffmpeg]>=2.31",
+  "pillow>=10.1",
+  "matplotlib>=3.7",
+]
 
 [tool.setuptools.packages.find]
 include = ["triple_pendulum*"]

@@ -1,4 +1,37 @@
-# Inverted Triple Pendulum — PPO and SAC from Scratch
+# Triple Pendulum Control with Model-Assisted Reinforcement Learning
+
+基于 MuJoCo、Gymnasium 与 PyTorch 的小车三级串联倒立摆控制工程。最终策略采用**轨迹优化初始化 + CEM 回报驱动策略搜索**，以一个带阶段输入的反馈策略完成从自然下垂起始的摆起、稳定直立和指定外力扰动后的恢复。
+
+本工程基于 [Zac Westbrook 的 triple-pendulum-rl](https://github.com/zw22x/triple-pendulum-rl) 扩展，保留原始 Git 历史、作者信息、PPO/SAC 实现及基准模型。下方的原项目文档描述平衡任务；本次摆起交付的详细算法和能力边界见 [技术交付说明](docs/HR_DELIVERY.md)。
+
+## 运行交付策略
+
+推荐 Python 3.11。在仓库根目录安装运行与测试依赖后启动：
+
+```bash
+python -m pip install -e ".[hr,dev]"
+python tools/demo_hr.py
+```
+
+演示使用已提交的 `checkpoints/hr/policy.pt`，无需重新训练。每局连续运行 35 秒，第 18 秒对顶杆施加 5 N、持续 0.2 秒的水平外力。演示时仅小车执行器输出驱动力；没有在线轨迹求解、手写控制器切换或中途重置。
+
+- [完整演示视频](artifacts/hr/demo/demo.mp4)
+- [状态与控制曲线](artifacts/hr/verification.png)
+- [100 局独立验收报告](artifacts/hr/validation/report.json)
+- [中文运行指南](RUN_GUIDE_ZH.md)
+
+```bash
+python tools/evaluate_gps.py --checkpoint checkpoints/hr/policy.pt --episodes 100 --seed 2000 --width 0.05 --velocity 0.05 --force 5 --out runs/hr_recheck
+python -m pytest -q
+```
+
+已保存结果：下垂附近随机初态独立验收 **100/100**，扰动恢复 **100/100**；31 个测试通过。稳定判据同时检查三根杆的绝对倾角不超过 15°、绝对角速度不超过 1 rad/s、小车位移不超过 0.95 m，并要求连续保持至少 10 秒。
+
+这些结果适用于报告中声明的初始分布及扰动力度；任意大角度初态或足以完全打翻系统的强冲击尚未验证。当前方法属于模型辅助策略学习，未宣称纯无模型 SAC/PPO 训练成功。
+
+## 原项目：PPO / SAC 平衡任务
+
+> **HR 摆起任务交付（2026-09-27）：** 新的单一学习策略已从自然下垂附近随机初态完成摆起、连续直立与顶杆外力扰动恢复。独立 100 局验收 100/100 通过；适用范围、视频、完整报告和运行命令见 [交付说明](docs/HR_DELIVERY.md)。实时演示：`python tools/demo_hr.py`。下方是原项目的平衡任务说明，旧模型不应视为已完成摆起任务。
 
 A custom continuous-control benchmark built on Gymnasium and MuJoCo, with from-scratch PyTorch implementations of Proximal Policy Optimization (PPO) and Soft Actor-Critic (SAC) that solve it.
 

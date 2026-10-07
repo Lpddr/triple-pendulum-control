@@ -1,0 +1,9 @@
+{
+  "checkpoint": "runs/gps/phase6/policy.pt",
+  "out": "runs/gps/robust6",
+  "generations": 30,
+  "population": 24,
+  "episodes": 32,
+  "width": 0.15,
+  "seed": 7
+}

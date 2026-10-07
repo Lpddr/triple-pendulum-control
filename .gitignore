@@ -16,3 +16,15 @@ examples/preview*.png
 frame.png
 wandb/
 
+runs/
+MUJOCO_LOG.TXT
+
+# Local credentials and editor state
+.env
+.env.*
+!.env.example
+.aws/
+.codex/
+.agents/
+.vscode/
+.idea/

@@ -1,0 +1,50 @@
+{
+  "checkpoint": "checkpoints/hr/policy.pt",
+  "checkpoint_sha256": "7e621269b735615c657506aa4eb6eeffdd494740838795adb5c5605195f36392",
+  "model_sha256": "f8d739268f670fe8c74cc3273fa9dd930902943142c917b08ad2af48acf49c74",
+  "config": {
+    "checkpoint": "checkpoints/hr/policy.pt",
+    "out": "artifacts/hr/demo",
+    "episodes": 1,
+    "seed": 2000,
+    "start": "hanging",
+    "width": 0.0,
+    "velocity": 0.0,
+    "seconds": 35,
+    "force": 5.0,
+    "push_at": 18.0,
+    "push_duration": 0.2,
+    "angle_deg": 15.0,
+    "angular_speed": 1.0,
+    "video": true
+  },
+  "dt": 0.05,
+  "passing": 1,
+  "episodes": 1,
+  "recovery_passing": 1,
+  "rows": [
+    {
+      "seed": 2000,
+      "start": "hanging",
+      "initial_state": [
+        0.0,
+        3.141592653589793,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hold_seconds": 16.22,
+      "pre_push_hold_seconds": 12.01,
+      "post_push_hold_seconds": 16.22,
+      "passing": true,
+      "recovery_passing": true,
+      "first_10s_hold_completed_at": 15.979999999999704,
+      "max_cart_m": 0.6262404035641232,
+      "max_force_N": 500.0,
+      "resets": 1
+    }
+  ]
+}

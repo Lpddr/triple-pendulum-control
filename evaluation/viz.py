@@ -111,6 +111,15 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Checkpoint to watch. Defaults to the most recently modified .pt file.",
     )
+    parser.add_argument(
+        "--swingup",
+        action="store_true",
+        help=(
+            "Watch the swing-up task: resets from a hanging chain or large "
+            "angles (the distribution the swing-up trainer uses). Without "
+            "this flag the env resets near-upright."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -120,7 +129,20 @@ def main() -> None:
     if not checkpoint_path.is_file():
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
-    env = gym.make("InvertedTriplePendulum-v0", render_mode="human")
+    if args.swingup:
+        # -999: do not reset when the tip drops — you want to see the whole
+        # swing-up attempt, including the failures.
+        env = gym.make(
+            "InvertedTriplePendulum-v0",
+            render_mode="human",
+            swingup=True,
+            reset_angle_limit=3.14,
+            termination_height=-999.0,
+        )
+        print("mode: swing-up (hanging / large-angle starts)")
+    else:
+        env = gym.make("InvertedTriplePendulum-v0", render_mode="human")
+        print("mode: balance (near-upright starts; add --swingup for swing-up)")
     try:
         obs_dim = env.observation_space.shape[0]
         act_dim = env.action_space.shape[0]
